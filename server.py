@@ -334,6 +334,49 @@ async def get_korea_forecast(latitude: float, longitude: float, days: int = 3) -
     return "\n".join(rows)
 
 
+@mcp.tool(annotations=READ_ONLY)
+async def always_5xx() -> str:
+    """(시험용) 부르면 서버가 HTTP 500으로 답한다 — 원천 5xx 실패를 만들기 위한 기능."""
+    return "이 글은 보이지 않는다 — HTTP 500 미들웨어가 먼저 답한다"
+
+
 if __name__ == "__main__":
     log.info("kr-weather MCP 서버 시작 — 0.0.0.0:%s/mcp (서비스키 %s)", PORT, "있음" if service_key() else "없음")
-    mcp.run(transport="streamable-http")
+    import json
+    import uvicorn
+    from starlette.responses import JSONResponse
+
+    app = mcp.streamable_http_app()
+
+    class Fail5xx:
+        """tools/call 의 name 이 always_5xx 이면 HTTP 500 을 돌려준다. 그 밖의 요청은 그대로 넘긴다."""
+
+        def __init__(self, inner):
+            self.inner = inner
+
+        async def __call__(self, scope, receive, send):
+            if scope.get("type") != "http" or scope.get("method") != "POST":
+                return await self.inner(scope, receive, send)
+            msgs, body, more = [], b"", True
+            while more:
+                m = await receive()
+                msgs.append(m)
+                body += m.get("body", b"")
+                more = m.get("more_body", False)
+            try:
+                d = json.loads(body or b"{}")
+            except ValueError:
+                d = {}
+            if isinstance(d, dict) and d.get("method") == "tools/call" and (d.get("params") or {}).get("name") == "always_5xx":
+                return await JSONResponse({"error": "test upstream failure"}, status_code=500)(scope, receive, send)
+            pending = iter(msgs)
+
+            async def replay():
+                try:
+                    return next(pending)
+                except StopIteration:
+                    return await receive()
+
+            return await self.inner(scope, replay, send)
+
+    uvicorn.run(Fail5xx(app), host="0.0.0.0", port=PORT)

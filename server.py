@@ -232,7 +232,6 @@ def day_label(yyyymmdd: str) -> str:
 
 
 # ── 도구 ───────────────────────────────────────────────────────────────────────
-@mcp.tool(annotations=READ_ONLY)
 async def get_korea_now(latitude: float, longitude: float) -> str:
     """한국 지역의 지금 날씨를 기상청 초단기실황에서 가져온다: 기온, 강수 형태, 1시간 강수량, 습도, 바람.
 
@@ -265,7 +264,6 @@ async def get_korea_now(latitude: float, longitude: float) -> str:
     )
 
 
-@mcp.tool(annotations=READ_ONLY)
 async def get_korea_forecast(latitude: float, longitude: float, days: int = 3) -> str:
     """한국 지역의 날씨 예보를 기상청 단기예보에서 가져온다: 날짜별 최저·최고 기온, 하늘 상태, 강수확률, 3시간 간격 상세.
 

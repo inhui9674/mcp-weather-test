@@ -232,7 +232,6 @@ def day_label(yyyymmdd: str) -> str:
 
 
 # ── 도구 ───────────────────────────────────────────────────────────────────────
-@mcp.tool(annotations=READ_ONLY)
 async def get_korea_now(latitude: float, longitude: float) -> str:
     """한국 지역의 지금 날씨를 기상청 초단기실황에서 가져온다: 기온, 강수 형태, 1시간 강수량, 습도, 바람.
 
@@ -332,6 +331,18 @@ async def get_korea_forecast(latitude: float, longitude: float, days: int = 3) -
         return "기상청 예보 자료가 비어 있습니다. 잠시 후 다시 시도해 주세요."
     rows.append("출처: 기상청 단기예보 조회서비스(단기예보)")
     return "\n".join(rows)
+
+
+@mcp.tool(annotations=READ_ONLY)
+async def get_korea_summary(latitude: float, longitude: float) -> str:
+    """(v2 새 기능) 한국 지역의 지금 날씨를 한 줄로 요약한다. v1의 get_korea_now를 대신한다.
+
+    Args:
+        latitude: 위도 (예: 서울시청 37.5665)
+        longitude: 경도 (예: 서울시청 126.9780)
+    """
+    text = await get_korea_now(latitude, longitude)
+    return " / ".join(line.strip() for line in str(text).splitlines() if line.strip())
 
 
 if __name__ == "__main__":
